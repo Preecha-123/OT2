@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>Executive OT Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    :root { 
+      --primary-dark: #1B5E20; 
+      --primary-mid: #2E7D32;  
+      --accent: #C8E6C9; 
+      --bg-light: #F1F8E9; 
+    }
+    body { font-family: 'Sarabun', sans-serif; background-color: var(--bg-light); margin: 0; }
+    
+    .header-panel { 
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-mid) 100%); 
+      color: white; padding: 1.2rem 2rem; border-bottom: 5px solid var(--accent);
+      text-align: center;
+    }
+    
+    .summary-tag {
+      padding: 10px 20px;
+      border-radius: 10px;
+      color: white;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      min-width: 180px;
+    }
+    .tag-left { background-color: #C0392B; }
+    .tag-right { background-color: #0A2342; }
+    .tag-label { font-size: 0.8rem; opacity: 0.9; display: block; }
+    .tag-value { font-size: 1.4rem; display: block; line-height: 1; }
+
+    .filter-section { 
+      background: #66FF99; margin: -20px auto 20px auto;
+      border-radius: 12px; padding: 1rem; box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+      max-width: 800px;
+    }
+    
+    .chart-box { 
+      background: #E8F5E9; border-radius: 15px; padding: 1.5rem; 
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 2rem;
+    }
+    
+    .scroll-chart-container { height: 500px; overflow-y: auto; }
+    .sync-status { font-size: 0.75rem; opacity: 0.8; }
+
+    .form-select { text-align: center; text-align-last: center; border-radius: 8px; }
+    .form-label { display: block; margin-bottom: 5px; color: var(--primary-dark); }
+
+    .btn-custom-print {
+      background-color: #F1C40F !important;
+      border-color: #D4AC0D !important;
+      color: #000 !important;
+      font-weight: 600 !important;
+      padding: 5px 20px !important;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    @media (max-width: 768px) {
+      .header-panel h1 { font-size: 1.2rem; }
+      .d-flex.justify-content-between.align-items-center.mb-4 { flex-direction: column; gap: 10px; }
+      .summary-tag { width: 100%; justify-content: center; }
+      .filter-section { margin-top: 10px; width: 95%; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header-panel">
+    <h1 class="h4 mb-0"><i class="fas fa-id-badge me-2"></i> OT GROUP B MONITORING</h1>
+    <div id="lastUpdate" class="sync-status">กำลังโหลดข้อมูล...</div>
+  </div>
+
+  <div class="container-fluid px-4 mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div class="summary-tag tag-left">
+        <i class="fas fa-exclamation-circle fa-2x"></i>
+        <div>
+          <span class="tag-label">OT เกิน 30 ชม.</span>
+          <span class="tag-value" id="overCount">0</span>
+        </div>
+      </div>
+      <div class="summary-tag tag-right">
+        <div class="text-end">
+          <span class="tag-label">OT รวมทั้งหมด</span>
+          <span class="tag-value" id="totalAll">0.00</span>
+        </div>
+        <i class="fas fa-clock fa-2x"></i>
+      </div>
+    </div>
+
+    <div class="row no-print justify-content-center">
+      <div class="col-12">
+        <div class="filter-section d-flex flex-wrap gap-3 align-items-end justify-content-center">
+          <div style="min-width: 250px;">
+            <label class="form-label small fw-bold w-100 text-center">เลือกชื่อ พนักงาน</label>
+            <select id="filterName" class="form-select form-select-sm" onchange="applyFilters()">
+              <option value="all">-- ทุกคน --</option>
+            </select>
+          </div>
+          <div style="min-width: 150px;">
+            <label class="form-label small fw-bold w-100 text-center">เลือก สัปดาห์</label>
+            <select id="filterWeek" class="form-select form-select-sm" onchange="applyFilters()">
+              <option value="all">-- ทุกสัปดาห์ --</option>
+              <option value="1">Week 1</option><option value="2">Week 2</option>
+              <option value="3">Week 3</option><option value="4">Week 4</option>
+            </select>
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-secondary" onclick="resetFilters()">RESET</button>
+            <button class="btn btn-custom-print" onclick="window.print()">
+              <i class="fas fa-print"></i> พิมพ์รายงาน
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4 justify-content-center">
+      <div class="col-lg-6">
+        <div class="chart-box">
+          <h6 class="fw-bold text-success mb-3 text-center">รายละเอียด OT รายสัปดาห์</h6>
+          <div class="scroll-chart-container">
+            <div id="wrapperWeekly"><canvas id="weeklyChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <div class="chart-box">
+          <h6 class="fw-bold text-success mb-3 text-center">ยอดรวม OT สะสมรายบุคคล</h6>
+          <div class="scroll-chart-container">
+            <div id="wrapperTotal"><canvas id="totalChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    Chart.register(ChartDataLabels);
+    let fullData = [];
+    let chartWeekly, chartTotal;
+    const scriptURL = "https://script.google.com/macros/s/AKfycbyZUVfXmgehxWgAQUPMj4I3NbmyBXL6YFvCxD9Uw02LRdgTsIHBo-bQdF8d_0atTfIc/exec"; 
+
+    async function fetchData() {
+      try {
+        const response = await fetch(scriptURL);
+        const result = await response.json();
+        // รองรับทั้งแบบส่ง result.data หรือส่ง data ตรงๆ
+        fullData = result.data || (typeof result === 'string' ? JSON.parse(result) : result); 
+
+        if(fullData && fullData.length > 0) {
+          populateDropdown();
+          calculateSummary(fullData.slice(1));
+          applyFilters();
+        }
+        document.getElementById('lastUpdate').innerText = "อัปเดต: " + new Date().toLocaleTimeString('th-TH');
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        document.getElementById('lastUpdate').innerText = "เกิดข้อผิดพลาดในการเชื่อมต่อ";
+      }
+    }
+
+    function calculateSummary(rows) {
+      let over30Count = 0;
+      let grandTotal = 0;
+      rows.forEach(r => {
+        for(let i=1; i<=4; i++) {
+          let val = parseFloat(r[i]) || 0;
+          if(val > 30) over30Count++;
+          grandTotal += val;
+        }
+      });
+      document.getElementById('overCount').innerText = over30Count;
+      document.getElementById('totalAll').innerText = grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2}) + " ชม.";
+    }
+
+    function populateDropdown() {
+      const s = document.getElementById('filterName');
+      if(s.options.length > 1) return;
+      fullData.slice(1).forEach(r => {
+        let o = document.createElement('option'); o.value = r[0]; o.text = r[0]; s.appendChild(o);
+      });
+    }
+
+    function applyFilters() {
+      const name = document.getElementById('filterName').value;
+      const week = document.getElementById('filterWeek').value;
+      let filtered = fullData.slice(1).filter(r => name === 'all' || r[0] === name);
+      render(filtered, week);
+    }
+
+    function render(data, weekFilter) {
+      const labels = data.map(r => r[0]);
+      const w1 = data.map(r => parseFloat(r[1]) || 0);
+      const w2 = data.map(r => parseFloat(r[2]) || 0);
+      const w3 = data.map(r => parseFloat(r[3]) || 0);
+      const w4 = data.map(r => parseFloat(r[4]) || 0);
+      const totalSums = data.map((r, i) => w1[i] + w2[i] + w3[i] + w4[i]);
+
+      const h = Math.max(500, data.length * 55) + "px";
+      document.getElementById('wrapperWeekly').style.height = h;
+      document.getElementById('wrapperTotal').style.height = h;
+
+      if(chartWeekly) chartWeekly.destroy();
+      if(chartTotal) chartTotal.destroy();
+
+      const options = {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { datalabels: { anchor: 'end', align: 'right', font: { weight: 'bold' } } }
+      };
+
+      chartWeekly = new Chart(document.getElementById('weeklyChart'), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: 'W1', data: w1, backgroundColor: w1.map(v => v > 30 ? '#E74C3C' : '#3498db'), hidden: weekFilter!=='all'&&weekFilter!=='1' },
+            { label: 'W2', data: w2, backgroundColor: w2.map(v => v > 30 ? '#E74C3C' : '#43A047'), hidden: weekFilter!=='all'&&weekFilter!=='2' },
+            { label: 'W3', data: w3, backgroundColor: w3.map(v => v > 30 ? '#E74C3C' : '#9b59b6'), hidden: weekFilter!=='all'&&weekFilter!=='3' },
+            { label: 'W4', data: w4, backgroundColor: w4.map(v => v > 30 ? '#E74C3C' : '#34495e'), hidden: weekFilter!=='all'&&weekFilter!=='4' }
+          ]
+        },
+        options: { ...options, plugins: { ...options.plugins, annotation: { annotations: {
+          l30: { type: 'line', xMin: 30, xMax: 30, borderColor: 'red', borderWidth: 1, borderDash: [5,5] }
+        }}}}
+      });
+
+      chartTotal = new Chart(document.getElementById('totalChart'), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{ data: totalSums, backgroundColor: totalSums.map(v => v > 120 ? '#C0392B' : '#1B5E20') }]
+        },
+        options: { ...options, plugins: { ...options.plugins, legend: { display: false } } }
+      });
+    }
+
+    function resetFilters() {
+      document.getElementById('filterName').value = 'all';
+      document.getElementById('filterWeek').value = 'all';
+      applyFilters();
+    }
+
+    window.onload = fetchData;
+    setInterval(fetchData, 60000);
+  </script>
+</body>
+</html>
