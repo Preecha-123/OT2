@@ -241,15 +241,47 @@
         }}}}
       });
 
+      // กราฟยอดรวมสะสม
       chartTotal = new Chart(document.getElementById('totalChart'), {
         type: 'bar',
         data: {
           labels: labels,
-          datasets: [{ data: totalSums, backgroundColor: totalSums.map(v => v > 120 ? '#C0392B' : '#1B5E20') }]
+          datasets: [{ 
+            label: 'OT สะสม',
+            data: totalSums, 
+            // แก้ไขเงื่อนไขสี: ถ้า > 80 ให้สีแดง #dc3545 (หรือ #C0392B), ถ้าไม่ใช่ให้ใช้สีเขียวเข้ม
+            backgroundColor: totalSums.map(v => v > 80 ? '#dc3545' : '#1B5E20') 
+          }]
         },
-        options: { ...options, plugins: { ...options.plugins, legend: { display: false } } }
+        options: { 
+          ...options, 
+          plugins: { 
+            ...options.plugins, 
+            legend: { display: false },
+            // เพิ่มเส้นเตือน (Annotation) ที่ระดับ 80 เพื่อให้เห็นชัดเจน
+            annotation: {
+              annotations: {
+                limitLine: {
+                  type: 'line',
+                  xMin: 80,
+                  xMax: 80,
+                  borderColor: 'red',
+                  borderWidth: 2,
+                  borderDash: [6, 6],
+                  label: {
+                    display: true,
+                    content: 'Limit 80 ชม.',
+                    position: 'end',
+                    backgroundColor: 'rgba(255,0,0,0.8)',
+                    color: 'white',
+                    font: { size: 10 }
+                  }
+                }
+              }
+            }
+          } 
+        }
       });
-    }
 
     function resetFilters() {
       document.getElementById('filterName').value = 'all';
