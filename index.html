@@ -245,7 +245,7 @@ chartTotal = new Chart(document.getElementById('totalChart'), {
         type: 'bar',
         data: {
           labels: labels,
-          datasets: [{ data: totalSums, backgroundColor: totalSums.map(v => v > 120 ? '#C0392B' : '#1B5E20') }]
+          datasets: [{ data: totalSums, backgroundColor: totalSums.map(v => v > 85 ? '#C0392B' : '#1B5E20') }]
         },
         options: { ...options, plugins: { ...options.plugins, legend: { display: false } } }
       });
